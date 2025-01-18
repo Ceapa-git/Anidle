@@ -1,5 +1,5 @@
-#ifndef ROUTE
-#define ROUTE
+#ifndef ROUTE_H
+#define ROUTE_H
 
 #include <string>
 #include <functional>
@@ -8,7 +8,8 @@ enum Method {
   GET = 1,
   POST = 2,
   PUT = 4,
-  DELETE = 8
+  DELETE = 8,
+  UNKNOWN = 16
 };
 
 struct Route {
@@ -21,4 +22,4 @@ struct Route {
 
 bool hasMethod(const Route&, Method);
 
-#endif // !ROUTE
+#endif // ROUTE_H

@@ -1,4 +1,5 @@
 #include "server.h"
+#include "request.h"
 
 #include <iostream>
 #include <string>
@@ -38,6 +39,20 @@ int validateOptions(const ServerOptions& options) {
   return 0;
 }
 
+void printBody(const Body& body, int indent = 0) {
+  std::string indentStr(indent, ' ');
+
+  if (body.type == Body::Type::VALUE) {
+    std::cout << body.value << "\n";
+  } else {
+    std::cout << "\n";
+    for (const auto& [key, value] : body.object) {
+      std::cout << indentStr << key << ": ";
+      printBody(value, indent + 2);
+    }
+  }
+}
+
 void serverLoop(const ServerOptions& options) {
   while (running) {
     sockaddr_in clientAddr;
@@ -55,16 +70,31 @@ void serverLoop(const ServerOptions& options) {
       continue;
     }
 
+    char clientIp[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, INET_ADDRSTRLEN);
+
     char buffer[1024];
     std::memset(buffer, 0, sizeof(buffer));
     ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
     if (bytesReceived < 0) {
-      std::cerr << "Failed to receive data.\n";
+      std::cerr << clientIp << ": Failed to receive data.\n";
       close(clientFd);
       continue;
     }
 
-    std::cout << "Received request:\n" << buffer << "\n";
+    HttpRequest request = parseHttpRequest(buffer, strlen(buffer));
+    std::cout << clientIp << ": " << request.methodStr << " " << request.path << "\n";
+    if (options.debug) {
+      std::cout << "\"" << request.method
+        << "\" \"" << request.path
+        << "\" \"" << request.queryParams
+        << "\"\nHeaders:";
+      for (const auto& header : request.headers) {
+        std::cout << header.first << ": " << header.second << "\n";
+      }
+      std::cout << "Body:\n";
+      printBody(request.body);
+    }
 
     std::string response =
             "HTTP/1.1 200 OK\r\n"
