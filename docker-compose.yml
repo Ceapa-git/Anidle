@@ -1,0 +1,15 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: backend-service
+    ports:
+      - "8081:8080"
+
+volumes:
+  db-anidle:
+
+networks:
+  anidle-net:
+    name: anidle-net
+    driver: bridge
