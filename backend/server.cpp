@@ -169,7 +169,7 @@ int createServer(const ServerOptions& options) {
   std::signal(SIGINT, signalHandler);
   std::signal(SIGTERM, signalHandler);
 
-  std::cout << "Server is listening on port " << options.port << " ...\n";
+  std::cout << "Server is listening ...\n";
   running = true;
 
   std::thread serverThread(serverLoop, options);

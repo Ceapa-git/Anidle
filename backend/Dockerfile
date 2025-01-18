@@ -11,7 +11,6 @@ WORKDIR /app
 COPY . .
 
 RUN mkdir build && cd build && cmake .. && make
-# RUN rm -rf build && mkdir build && cd build && cmake .. && make
 
-CMD ["./build/backend"]
+CMD ["./build/backend", "-l"]
 
