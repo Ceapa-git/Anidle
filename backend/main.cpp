@@ -41,6 +41,7 @@ bool log = false;
 void processCliArgs(int argc, char** argv) {
   for (int i = 1; i < argc; i++) {
     std::string arg(argv[i]);
+    std::cout << arg << "\n";
     if (arg == "-d" || arg == "--debug") {
       options.debug = true;
     } else if (arg == "-l" || arg == "--log") {
@@ -76,10 +77,8 @@ int main(int argc, char** argv) {
   CoutBuf coutLogBuf(logFile, coutBuf);
   CerrBuf cerrLogBuf(logFile, cerrBuf);
 
-  if (!options.debug) {
-    std::cout.rdbuf(&coutLogBuf);
-    std::cerr.rdbuf(&cerrLogBuf);
-  }
+  std::cout.rdbuf(&coutLogBuf);
+  std::cerr.rdbuf(&cerrLogBuf);
 
   createServer(options);
 
