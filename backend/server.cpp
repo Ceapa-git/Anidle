@@ -15,6 +15,7 @@
 #include <condition_variable>
 #include <atomic>
 #include <fcntl.h>
+#include <sstream>
 
 std::atomic<bool> running(true);
 std::mutex mtx;
@@ -52,6 +53,23 @@ void printBody(const Body& body, int indent = 0) {
     }
   }
 }
+
+Route* findRoute(Route* initial, std::string route) {
+  Route* current = initial;
+
+  while (current != nullptr && current->path != route && current->next != nullptr) {
+    current = current->next;
+  }
+
+  return current;
+}
+
+std::string notFound = 
+  "HTTP/1.1 404 Not Found\r\n"
+  "Content-Type: text/plain\r\n"
+  "Content-Length: 13\r\n"
+  "\r\n"
+  "404 Not Found";
 
 void serverLoop(const ServerOptions& options) {
   while (running) {
@@ -96,20 +114,26 @@ void serverLoop(const ServerOptions& options) {
       printBody(request.body);
     }
 
-    std::string response =
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/html\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "<!DOCTYPE html>"
-            "<html>"
-            "<head><title>Simple C++ HTTP Server</title></head>"
-            "<body><h1>Hello, World!</h1></body>"
-            "</html>";
+    std::istringstream iss(request.path);
+    std::string token;
+    std::getline(iss, token, '/');
+    Route* currentRoute = options.routes;
+    while (currentRoute != nullptr && std::getline(iss, token, '/')) {
+      std::cout << "Path fragment: \"" << token << "\"\n";
+      currentRoute = findRoute(currentRoute->nested, token);
+    }
 
-    ssize_t bytes_sent = send(clientFd, response.c_str(), response.size(), 0);
-    if (bytes_sent < 0) {
-        std::cerr << "Failed to send response.\n";
+    if (currentRoute != nullptr) {
+      std::string response = currentRoute->handler(request.queryParams, request.body);
+      ssize_t bytes_sent = send(clientFd, response.c_str(), response.size(), 0);
+      if (bytes_sent < 0) {
+          std::cerr << "Failed to send response.\n";
+      }
+    } else {
+      ssize_t bytes_sent = send(clientFd, notFound.c_str(), notFound.size(), 0);
+      if (bytes_sent < 0) {
+          std::cerr << "Failed to send response.\n";
+      }
     }
 
     close(clientFd);

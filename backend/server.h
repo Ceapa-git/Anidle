@@ -1,13 +1,7 @@
 #ifndef SERVER_H
 #define SERVER_H
 
-#include "route.h"
-
-struct ServerOptions {
-  int port;
-  bool debug = false;
-  Route* routes;
-};
+#include "types.h"
 
 int createServer(const ServerOptions&);
 

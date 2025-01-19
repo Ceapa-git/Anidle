@@ -1,5 +1,4 @@
 #include "server.h"
-#include "route.h"
 
 #include <iostream>
 #include <fstream>
@@ -61,11 +60,14 @@ int main(int argc, char** argv) {
   }
 
   Route base;
-  base.path = "/";
+  base.path = "";
   base.method = Method::GET;
-  base.handler = [](const std::string& params, const std::string& body) {
-    std::cout << "GET /";
+  base.handler = [](const std::string& params, const Body& body) {
+    std::string response = "running";
+    return response;
   };
+
+  options.routes = &base;
 
   if (!logToFile) {
     createServer(options);

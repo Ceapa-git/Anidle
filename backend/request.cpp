@@ -1,7 +1,6 @@
 #include "request.h"
 
 #include <sstream>
-#include <algorithm>
 #include <iostream>
 
 Method stringToHttpMethod(const std::string& str) {
