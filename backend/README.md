@@ -14,5 +14,5 @@ Get anime ids for the daily anime
         [characterGuess3Id1, characterGuess3Id2, characterGuess3Id3, characterGuess3Id4]
     ],
     "animeGuess":animeGuessId
-]}
+}
 ```
