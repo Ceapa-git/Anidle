@@ -48,4 +48,9 @@ struct ServerOptions {
   Route* routes;
 };
 
+enum ResponseStatus {
+  OK = 200,
+  NOT_FOUND = 404
+};
+
 #endif // TYPE_H

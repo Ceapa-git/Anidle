@@ -1,5 +1,7 @@
 #include "server.h"
 #include "request.h"
+#include "response.h"
+#include "types.h"
 
 #include <iostream>
 #include <string>
@@ -64,13 +66,6 @@ Route* findRoute(Route* initial, std::string route) {
   return current;
 }
 
-std::string notFound = 
-  "HTTP/1.1 404 Not Found\r\n"
-  "Content-Type: text/plain\r\n"
-  "Content-Length: 13\r\n"
-  "\r\n"
-  "404 Not Found";
-
 void serverLoop(const ServerOptions& options) {
   while (running) {
     sockaddr_in clientAddr;
@@ -123,17 +118,18 @@ void serverLoop(const ServerOptions& options) {
       currentRoute = findRoute(currentRoute->nested, token);
     }
 
+    std::string response;
     if (currentRoute != nullptr) {
-      std::string response = currentRoute->handler(request.queryParams, request.body);
-      ssize_t bytes_sent = send(clientFd, response.c_str(), response.size(), 0);
-      if (bytes_sent < 0) {
-          std::cerr << "Failed to send response.\n";
-      }
+      response = currentRoute->handler(request.queryParams, request.body);
     } else {
-      ssize_t bytes_sent = send(clientFd, notFound.c_str(), notFound.size(), 0);
-      if (bytes_sent < 0) {
-          std::cerr << "Failed to send response.\n";
-      }
+      Body notFound;
+      notFound.type = Body::Type::VALUE;
+      notFound.value = "Not Found";
+      response = createResponse(NOT_FOUND, notFound);
+    }
+    ssize_t bytes_sent = send(clientFd, response.c_str(), response.size(), 0);
+    if (bytes_sent < 0) {
+      std::cerr << "Failed to send response.\n";
     }
 
     close(clientFd);

@@ -1,4 +1,6 @@
+#include "response.h"
 #include "server.h"
+#include "types.h"
 
 #include <iostream>
 #include <fstream>
@@ -66,6 +68,26 @@ int main(int argc, char** argv) {
     std::string response = "running";
     return response;
   };
+
+  Route routeA;
+  routeA.path = "a";
+  routeA.method = Method::GET;
+  routeA.handler = [](const std::string& params, const Body& body) {
+    Body ra;
+    ra.type = Body::Type::OBJECT;
+    ra.object["a"].type = Body::Type::VALUE;
+    ra.object["a"].value = "asdf";
+    ra.object["b"].type = Body::Type::VALUE;
+    ra.object["b"].value = "123.4";
+    ra.object["c"].type = Body::Type::VALUE;
+    ra.object["c"].value = "false";
+    ra.object["d"].type = Body::Type::OBJECT;
+    ra.object["d"].object["e"].type = Body::Type::VALUE;
+    ra.object["d"].object["e"].value = "false";
+    std::string response = createResponse(OK, ra);
+    return response;
+  };
+  base.nested = &routeA;
 
   options.routes = &base;
 
