@@ -10,6 +10,9 @@ WORKDIR /app
 
 COPY . .
 
+ARG TOKEN
+ENV TOKEN=$TOKEN
+
 RUN mkdir build && cd build && cmake .. && make
 
 CMD ["./build/backend", "-l"]

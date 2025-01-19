@@ -5,6 +5,7 @@
 #include <fstream>
 #include <streambuf>
 #include <string>
+#include <cstdlib>
 
 
 struct CoutBuf : public std::streambuf {
@@ -36,16 +37,16 @@ struct CerrBuf : public std::streambuf {
 };
 
 ServerOptions options;
-bool log = false;
+bool logToFile = false;
+std::string apiToken;
 
 void processCliArgs(int argc, char** argv) {
   for (int i = 1; i < argc; i++) {
     std::string arg(argv[i]);
-    std::cout << arg << "\n";
     if (arg == "-d" || arg == "--debug") {
       options.debug = true;
     } else if (arg == "-l" || arg == "--log") {
-      log = true;
+      logToFile = true;
     }
   }
 }
@@ -54,6 +55,11 @@ int main(int argc, char** argv) {
   options.port = 8080;
   processCliArgs(argc, argv);
 
+  apiToken = std::getenv("TOKEN");
+  if (options.debug) {
+    std::cout << "Token: " << apiToken << "\n";
+  }
+
   Route base;
   base.path = "/";
   base.method = Method::GET;
@@ -61,7 +67,7 @@ int main(int argc, char** argv) {
     std::cout << "GET /";
   };
 
-  if (!log) {
+  if (!logToFile) {
     createServer(options);
     return 0;
   }

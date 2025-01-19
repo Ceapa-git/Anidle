@@ -1,7 +1,10 @@
 services:
   backend:
     build:
-      context: ./backend
+      context: .
+      dockerfile: Dockerfile
+      args:
+        TOKEN: TOKEN
     container_name: backend-service
     ports:
       - "8081:8080"
