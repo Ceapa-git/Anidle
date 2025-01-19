@@ -17,12 +17,14 @@ enum Method {
 struct Body {
   enum class Type {
     VALUE,
-    OBJECT
+    OBJECT,
+    ARRAY
   };
 
   Type type;
   std::string value;
   std::map<std::string, Body> object;
+  std::vector<Body> array;
 };
 
 struct Route {

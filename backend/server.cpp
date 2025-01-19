@@ -47,12 +47,25 @@ void printBody(const Body& body, int indent = 0) {
 
   if (body.type == Body::Type::VALUE) {
     std::cout << body.value << "\n";
-  } else {
+  } else if (body.type == Body::Type::OBJECT){
     std::cout << "\n";
     for (const auto& [key, value] : body.object) {
       std::cout << indentStr << key << ": ";
       printBody(value, indent + 2);
     }
+  } else if (body.type == Body::Type::ARRAY) {
+    std::cout << "\n" << indentStr << "[\n";
+    for (const auto& value : body.array) {
+      std::cout << indentStr << "  ";
+      if (value.type == Body::Type::OBJECT) {
+        std::cout << "{";
+        printBody(value, indent + 4);
+        std::cout << indentStr << "  }\n";
+      } else {
+        printBody(value, indent + 2);
+      }
+    }
+    std::cout << indentStr << "]\n";
   }
 }
 

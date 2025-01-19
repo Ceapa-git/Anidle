@@ -1,4 +1,5 @@
 #include "request.h"
+#include "types.h"
 
 #include <sstream>
 #include <iostream>
@@ -26,11 +27,34 @@ Body parseBody(std::istream& stream) {
 
       std::string value = line.substr(colonPos + 1);
       value.erase(0, value.find_first_not_of(" \t\r\n"));
+
       if (value == "{") {
         Body nestedBody = parseBody(stream);
         body.object[key] = nestedBody;
       } else if (value == "}") {
         break;
+      } else if (value == "[") {
+        Body arrayBody;
+        arrayBody.type = Body::Type::ARRAY;
+
+        while (std::getline(stream, line)) {
+          line.erase(0, line.find_first_not_of(" \t\r\n"));
+          line.erase(line.find_last_not_of(" ,\t\r\n") + 1);
+
+          if (line == "]") {
+            break;
+          } else if (line == "{") {
+            Body nestedBody = parseBody(stream);
+            arrayBody.array.push_back(nestedBody);
+          } else {
+            Body valueBody;
+            valueBody.type = Body::Type::VALUE;
+            valueBody.value = line;
+            arrayBody.array.push_back(valueBody);
+          }
+        }
+
+        body.object[key] = arrayBody;
       } else {
         Body valueBody;
         valueBody.type = Body::Type::VALUE;

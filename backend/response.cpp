@@ -12,10 +12,14 @@ std::string bodyToString(const Body& body) {
   std::string str;
   if (body.type == Body::Type::OBJECT) {
     str += "{";
+    bool pop = false;
     for (const auto& [key, value] : body.object) {
       str += "\"" + key + "\":" + bodyToString(value) + ",";
+      pop = true;
     }
-    str.pop_back();
+    if (pop) {
+      str.pop_back();
+    }
     str += "}";
   } else if (body.type == Body::Type::VALUE) {
     if (isNumber(body.value)) {
@@ -25,6 +29,17 @@ std::string bodyToString(const Body& body) {
     } else {
       str += "\"" + body.value + "\"";
     }
+  } else if (body.type == Body::Type::ARRAY) {
+    str += "[";
+    bool pop = false;
+    for (const auto& value : body.array) {
+      str += bodyToString(value) + ",";
+      pop = true;
+    }
+    if (pop) {
+      str.pop_back();
+    }
+    str += "]";
   }
   return str;
 }
