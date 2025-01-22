@@ -65,7 +65,10 @@ int main(int argc, char** argv) {
   base.path = "";
   base.method = Method::GET;
   base.handler = [](const std::string& params, const Body& body) {
-    std::string response = "running";
+    Body b;
+    b.type = Body::Type::VALUE;
+    b.value = "running";
+    std::string response = createResponse(OK, b);
     return response;
   };
 

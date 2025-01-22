@@ -3,6 +3,7 @@
 
 buildBackend.sh
 buildAndRunBackend.sh
-runBacken.sh
+runBackend.sh
+watchAndRun.sh
 
 log

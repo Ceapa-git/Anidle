@@ -45,14 +45,14 @@ std::string bodyToString(const Body& body) {
 }
 
 std::string createResponse(ResponseStatus status, Body body) {
-  std::string response;
+  std::string response = "HTTP/1.1 ";
 
   switch (status) {
   case OK:
-    response += "HTTP/1.1 200 OK\r\n";
+    response += "200 OK\r\n";
     break;
   case NOT_FOUND:
-    response += "HTTP/1.1 404 Not Found\r\n";
+    response += "404 Not Found\r\n";
     break;
   }
 
