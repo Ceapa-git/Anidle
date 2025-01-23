@@ -16,6 +16,8 @@ pkg_check_modules(LIBMONGOCXX REQUIRED libmongocxx)
 include_directories(${LIBMONGOCXX_INCLUDE_DIRS})
 link_directories(${LIBMONGOCXX_LIBRARY_DIRS})
 
+find_package(jwt-cpp CONFIG REQUIRED)
+
 # Collect all .cpp files
 file(GLOB SOURCES CONFIGURE_DEPENDS "${CMAKE_SOURCE_DIR}/*.cpp")
 
@@ -25,7 +27,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 # Add executable
 add_executable(backend ${SOURCES})
 
-target_link_libraries(backend ${LIBMONGOCXX_LIBRARIES})
+target_link_libraries(backend ${LIBMONGOCXX_LIBRARIES} jwt-cpp::jwt-cpp)
 
 target_compile_options(backend PRIVATE ${LIBMONGOCXX_CFLAGS_OTHER})
 

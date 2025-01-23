@@ -48,13 +48,28 @@ std::string createResponse(ResponseStatus status, Body body) {
   std::string response = "HTTP/1.1 ";
 
   switch (status) {
-  case OK:
-    response += "200 OK\r\n";
-    break;
-  case NOT_FOUND:
-    response += "404 Not Found\r\n";
-    break;
-  }
+    case OK:
+      response += "200 OK\r\n";
+      break;
+    case NOT_FOUND:
+      response += "404 Not Found\r\n";
+      break;
+    case BAD_REQUEST:
+      response += "400 Bad Request\r\n";
+      break;
+    case UNAUTHORIZED:
+      response += "401 Unauthorized\r\n";
+      break;
+    case FORBIDDEN:
+      response += "403 Forbidden\r\n";
+      break;
+    case INTERNAL_SERVER_ERROR:
+      response += "500 Internal Server Error\r\n";
+      break;
+    default:
+      response += "500 Internal Server Error\r\n"; // Fallback for unknown status
+      break;
+  } 
 
   response += "Connection: close\r\n";
 

@@ -6,6 +6,8 @@ services:
       args:
         TOKEN: $TOKEN
         MONGO_URI: $MONGO_URI
+        MONGO_DB: $MONGO_DB
+        JWT_ISSUER: $JWT_ISSUER
     container_name: backend-service
     ports:
       - "8081:8080"
