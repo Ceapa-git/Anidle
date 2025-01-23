@@ -1,6 +1,7 @@
 #include "response.h"
 #include "server.h"
 #include "types.h"
+#include "db.h"
 
 #include <iostream>
 #include <fstream>
@@ -62,6 +63,13 @@ int main(int argc, char** argv) {
   apiToken = std::getenv("TOKEN");
   if (options.debug) {
     std::cout << "Token: " << apiToken << "\n";
+  }
+
+  mongocxx::instance instance;
+  auto client = createDBClient(std::getenv("MONGO_URI"));
+  auto db = client["anidle"];
+  if (!db.has_collection("users")) {
+    client["anidle"].create_collection("users");
   }
 
   Route base;
