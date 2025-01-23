@@ -7,7 +7,10 @@
 #include <streambuf>
 #include <string>
 #include <cstdlib>
-
+#include <bsoncxx/json.hpp>
+#include <bsoncxx/builder/stream/document.hpp>
+#include <mongocxx/client.hpp>
+#include <mongocxx/instance.hpp>
 
 struct CoutBuf : public std::streambuf {
   std::ofstream& file;
@@ -71,40 +74,6 @@ int main(int argc, char** argv) {
     std::string response = createResponse(OK, b);
     return response;
   };
-
-  Route routeA;
-  routeA.path = "a";
-  routeA.method = Method::GET;
-  routeA.handler = [](const std::string& params, const Body& body) {
-    Body ra;
-    ra.type = Body::Type::OBJECT;
-    ra.object["a"].type = Body::Type::VALUE;
-    ra.object["a"].value = "asdf";
-    ra.object["b"].type = Body::Type::VALUE;
-    ra.object["b"].value = "123.4";
-    ra.object["c"].type = Body::Type::VALUE;
-    ra.object["c"].value = "false";
-    ra.object["d"].type = Body::Type::OBJECT;
-    ra.object["d"].object["e"].type = Body::Type::VALUE;
-    ra.object["d"].object["e"].value = "false";
-    ra.object["d"].object["f"].type = Body::Type::ARRAY;
-    Body rg;
-    rg.type = Body::Type::VALUE;
-    rg.value = "asdf";
-    Body rh;
-    rh.type = Body::Type::VALUE;
-    rh.value = "1123a";
-    Body rj;
-    rj.type = Body::Type::OBJECT;
-    rj.object["k"].type = Body::Type::VALUE;
-    rj.object["k"].value = "true";
-    ra.object["d"].object["f"].array.push_back(rg);
-    ra.object["d"].object["f"].array.push_back(rh);
-    ra.object["d"].object["f"].array.push_back(rj);
-    std::string response = createResponse(OK, ra);
-    return response;
-  };
-  base.nested = &routeA;
 
   options.routes = &base;
 

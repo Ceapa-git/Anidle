@@ -1,13 +1,30 @@
 services:
   backend:
     build:
-      context: .
+      context: ./backend
       dockerfile: Dockerfile
       args:
         TOKEN: TOKEN
     container_name: backend-service
     ports:
       - "8081:8080"
+    networks:
+      - anidle-net
+    environment:
+      - MONGODB_URI=mongodb://mongodb-service:27017/anidle
+
+  mongodb:
+    image: mongo:6.0
+    container_name: mongodb-service
+    ports:
+      - "27018:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: root
+    volumes:
+      - db-anidle:/data/db
+    networks:
+      - anidle-net
 
 volumes:
   db-anidle:

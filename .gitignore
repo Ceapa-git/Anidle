@@ -1,9 +1,8 @@
 .git/
+.idea/
+utils/
+build/.cache
+
 .env
-
-buildBackend.sh
-buildAndRunBackend.sh
-runBackend.sh
-watchAndRun.sh
-
 log
+compile_commands.json
