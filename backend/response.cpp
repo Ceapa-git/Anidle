@@ -63,6 +63,9 @@ std::string createResponse(ResponseStatus status, Body body) {
     case FORBIDDEN:
       response += "403 Forbidden\r\n";
       break;
+    case CONFLICT:
+      response += "409 Conflict\r\n";
+      break;
     case INTERNAL_SERVER_ERROR:
       response += "500 Internal Server Error\r\n";
       break;

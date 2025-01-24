@@ -1,4 +1,4 @@
-#include "jwt.h"
+#include "security.h"
 #include "jwt-cpp/jwt.h"
 
 #include <vector>
@@ -9,6 +9,10 @@
 #include <exception>
 #include <iostream>
 #include <string>
+#include <sstream>
+#include <iomanip>
+#include <openssl/sha.h>
+#include <openssl/types.h>
 #include <openssl/rand.h>
 #include <openssl/bio.h>
 #include <openssl/evp.h>
@@ -76,5 +80,51 @@ std::string createJwtKey(std::size_t numBytes) {
   BIO_free_all(b64);
 
   return encodedKey;
+}
+
+std::tuple<std::string, std::string> extractHostAndUsername(const std::string& token) {
+  try {
+    auto decoded = jwt::decode(token);
+
+    std::string ip = decoded.get_payload_claim("ip").as_string();
+    std::string username = decoded.get_payload_claim("username").as_string();
+
+    return std::make_tuple(ip, username);
+  } catch (const std::exception& e) {
+    std::cerr << "[JWT] Error extracting claims: " << e.what() << "\n";
+    return std::make_tuple("", "");
+  }
+}
+
+std::string hashPassword(const std::string& password) {
+  EVP_MD_CTX* context = EVP_MD_CTX_new();
+  if (!context) {
+    throw std::runtime_error("Failed to create EVP_MD_CTX");
+  }
+
+  if (EVP_DigestInit_ex(context, EVP_sha256(), nullptr) != 1) {
+    EVP_MD_CTX_free(context);
+    throw std::runtime_error("Failed to initialize digest context with SHA256");
+  }
+
+  if (EVP_DigestUpdate(context, password.c_str(), password.size()) != 1) {
+    EVP_MD_CTX_free(context);
+    throw std::runtime_error("Failed to update digest context with input data");
+  }
+
+  std::vector<unsigned char> hash(EVP_MAX_MD_SIZE);
+  unsigned int hashLength = 0;
+  if (EVP_DigestFinal_ex(context, hash.data(), &hashLength) != 1) {
+    EVP_MD_CTX_free(context);
+    throw std::runtime_error("Failed to finalize digest");
+  }
+
+  EVP_MD_CTX_free(context);
+
+  std::stringstream ss;
+  for (unsigned int i = 0; i < hashLength; ++i) {
+    ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(hash[i]);
+  }
+  return ss.str();
 }
 
