@@ -12,9 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(LIBMONGOCXX REQUIRED libmongocxx)
+pkg_check_modules(LIBBSONCXX REQUIRED libbsoncxx)
 
-include_directories(${LIBMONGOCXX_INCLUDE_DIRS})
-link_directories(${LIBMONGOCXX_LIBRARY_DIRS})
+include_directories(${LIBMONGOCXX_INCLUDE_DIRS} ${LIBBSONCXX_INCLUDE_DIRS})
+link_directories(${LIBMONGOCXX_LIBRARY_DIRS} ${LIBBSONCXX_LIBRARY_DIRS})
 
 find_package(jwt-cpp CONFIG REQUIRED)
 
@@ -29,7 +30,7 @@ include_directories(${CMAKE_SOURCE_DIR})
 # Add executable
 add_executable(backend ${SOURCES})
 
-target_link_libraries(backend ${LIBMONGOCXX_LIBRARIES} jwt-cpp::jwt-cpp OpenSSL::Crypto)
+target_link_libraries(backend ${LIBMONGOCXX_LIBRARIES} ${LIBBSONCXX_LIBRARIES}  jwt-cpp::jwt-cpp OpenSSL::Crypto)
 
-target_compile_options(backend PRIVATE ${LIBMONGOCXX_CFLAGS_OTHER})
+target_compile_options(backend PRIVATE ${LIBMONGOCXX_CFLAGS_OTHER} ${LIBMONGOCXX_CFLAGS_OTHER})
 
