@@ -1,12 +1,18 @@
 #include "jwt.h"
 #include "jwt-cpp/jwt.h"
 
+#include <vector>
+#include <stdexcept>
 #include <chrono>
 #include <cstddef>
 #include <cstdlib>
 #include <exception>
+#include <iostream>
 #include <random>
 #include <string>
+#include <openssl/rand.h>
+#include <openssl/bio.h>
+#include <openssl/evp.h>
 
 std::string jwtKey;
 
@@ -31,6 +37,10 @@ std::string createJwt(const std::string& ip, const std::string& username, int du
 }
 
 bool isJwtValid(const std::string& token) {
+  if (jwtKey.empty()) {
+    std::cerr << "[JWT] JWT Key is empty\n";
+    return false;
+  }
   try {
     auto decoded = jwt::decode(token);
 
@@ -45,24 +55,27 @@ bool isJwtValid(const std::string& token) {
   }
 }
 
-std::string createJwtKey(std::size_t length) {
-  static const char charset[] =
-    "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    "abcdefghijklmnopqrstuvwxyz"
-    "0123456789-_";
-
-  static std::random_device rd;
-  static std::mt19937 generator(rd());
-
-  std::uniform_int_distribution<std::size_t> dist(0, sizeof(charset) - 2);
-
-  std::string key;
-  key.reserve(length);
-
-  for (std::size_t i = 0; i < length; ++i) {
-    key.push_back(charset[dist(generator)]);
+std::string createJwtKey(std::size_t numBytes) {
+  std::vector<unsigned char> buffer(numBytes);
+  if (RAND_bytes(buffer.data(), static_cast<int>(buffer.size())) != 1) {
+    throw std::runtime_error("Failed to generate random bytes");
   }
 
-  return key;
+  BIO* bio = BIO_new(BIO_s_mem());
+  BIO* b64 = BIO_new(BIO_f_base64());
+
+  BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
+  b64 = BIO_push(b64, bio);
+
+  BIO_write(b64, buffer.data(), buffer.size());
+  BIO_flush(b64);
+
+  BUF_MEM* memPtr;
+  BIO_get_mem_ptr(b64, &memPtr);
+
+  std::string encodedKey(memPtr->data, memPtr->length);
+  BIO_free_all(b64);
+
+  return encodedKey;
 }
 

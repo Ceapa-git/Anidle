@@ -4,7 +4,7 @@
 #include <cstddef>
 #include <string>
 
-void setJwtKey(std::string);
+void setJwtKey(const std::string&);
 std::string createJwt(const std::string&, const std::string&, int);
 bool isJwtValid(const std::string&);
 std::string createJwtKey(std::size_t);

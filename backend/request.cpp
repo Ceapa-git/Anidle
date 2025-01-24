@@ -96,8 +96,10 @@ HttpRequest parseHttpRequest(char* buffer, int len) {
     if (colonPos != std::string::npos) {
       std::string key = line.substr(0, colonPos);
       std::string value = line.substr(colonPos + 1);
+      key.erase(0, key.find_first_not_of(" \t\r\n"));
       key.erase(key.find_last_not_of(" \t\r\n") + 1);
       value.erase(0, value.find_first_not_of(" \t\r\n"));
+      value.erase(value.find_last_not_of(" \t\r\n") + 1);
       request.headers[key] = value;
     }
   }

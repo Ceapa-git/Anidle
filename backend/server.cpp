@@ -99,7 +99,7 @@ void serverLoop(const ServerOptions& options) {
     char clientIp[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, INET_ADDRSTRLEN);
 
-    char buffer[1024];
+    char buffer[2048];
     std::memset(buffer, 0, sizeof(buffer));
     ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
     if (bytesReceived < 0) {
@@ -114,7 +114,7 @@ void serverLoop(const ServerOptions& options) {
       std::cout << "\"" << request.method
         << "\" \"" << request.path
         << "\" \"" << request.queryParams
-        << "\"\nHeaders:";
+        << "\"\nHeaders:\n";
       for (const auto& header : request.headers) {
         std::cout << header.first << ": " << header.second << "\n";
       }
@@ -133,7 +133,7 @@ void serverLoop(const ServerOptions& options) {
 
     std::string response;
     if (currentRoute != nullptr) {
-      response = currentRoute->handler(request.queryParams, request.body);
+      response = currentRoute->handler(request);
     } else {
       Body notFound;
       notFound.type = Body::Type::VALUE;

@@ -59,7 +59,11 @@ void processCliArgs(int argc, char** argv) {
   }
 }
 
-bool validateBodyLogin(const Body& body) {
+bool validateRequestLogin(const HttpRequest& request) {
+  // TODO
+  return true;
+}
+bool validateRequestValidate(const HttpRequest& request) {
   // TODO
   return true;
 }
@@ -86,7 +90,7 @@ int main(int argc, char** argv) {
   try {
     if (db["jwt"].count_documents({}) == 0) {
       bsoncxx::builder::stream::document doc_builder;
-      doc_builder << "key" << createJwtKey(256);
+      doc_builder << "key" << createJwtKey(32);
       db["jwt"].insert_one(doc_builder.view());
     }
     auto token = db["jwt"].find_one({});
@@ -97,15 +101,16 @@ int main(int argc, char** argv) {
     std::cerr << "Error: " << e.what() << "\n";
   }
 
+  setJwtKey(jwtKey);
+
   Route base;
   base.path = "";
   base.method = Method::GET;
-  base.handler = [](const std::string& params, const Body& body) {
+  base.handler = [](const HttpRequest& request) {
     Body b;
     b.type = Body::Type::VALUE;
     b.value = "running";
-    std::string response = createResponse(OK, b);
-    return response;
+    return createResponse(OK, b);
   };
 
   // routes -----------------------------------------------------------------------
@@ -113,20 +118,52 @@ int main(int argc, char** argv) {
   Route login;
   login.path = "login";
   login.method = Method::POST;
-  login.handler = [](const std::string& params, const Body& body) {
-    if (!validateBodyLogin(body)) {
+  login.handler = [](const HttpRequest& request) {
+    if (!validateRequestLogin(request)) {
       Body invalid;
       invalid.type = Body::Type::VALUE;
       invalid.value = "not a valid login body";
-      std::string response = createResponse(BAD_REQUEST, invalid);
-      return response;
+      return createResponse(BAD_REQUEST, invalid);
     }
     Body token;
     token.type = Body::Type::VALUE;
-    token.value = createJwt("x.x.x.x", body.object.at("username").value, 60 * 30);
+    std::string host = request.headers.at("Host");
+    std::string username = request.body.object.at("username").value;
+    username.erase(0, 1);
+    username.erase(username.length() - 1);
+    token.value = createJwt(
+      host,
+      username,
+      10
+    );
     return createResponse(OK, token);
   };
   base.nested = &login;
+
+  Route validate;
+  validate.path = "validate";
+  validate.method = Method::GET;
+  validate.handler = [](const HttpRequest& request) {
+    if (!validateRequestValidate(request)) {
+      Body invalid;
+      invalid.type = Body::Type::VALUE;
+      invalid.value = "not a valid login body";
+      return createResponse(BAD_REQUEST, invalid);
+    }
+    std::string bearer = request.headers.at("Authorization");
+    std::string token = bearer.substr(7);
+    if (isJwtValid(token)) {
+      Body valid;
+      valid.type = Body::Type::VALUE;
+      valid.value = "jwt valid";
+      return createResponse(OK, valid);
+    }
+    Body invalid;
+    invalid.type = Body::Type::VALUE;
+    invalid.value = "jwt invalid";
+    return createResponse(FORBIDDEN, invalid);
+  };
+  login.next = &validate;
 
   // routes -----------------------------------------------------------------------
 

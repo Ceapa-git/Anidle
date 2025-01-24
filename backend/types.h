@@ -27,14 +27,6 @@ struct Body {
   std::vector<Body> array;
 };
 
-struct Route {
-  Route* next = nullptr;
-  Route* nested = nullptr;
-  std::string path = "";
-  Method method = Method::NONE;
-  std::function<std::string(const std::string&, const Body&)> handler = nullptr; // query params, and body
-}; 
-
 struct HttpRequest {
   Method method;
   std::string methodStr;
@@ -43,6 +35,14 @@ struct HttpRequest {
   std::map<std::string, std::string> headers;
   Body body;
 };
+
+struct Route {
+  Route* next = nullptr;
+  Route* nested = nullptr;
+  std::string path = "";
+  Method method = Method::NONE;
+  std::function<std::string(const HttpRequest&)> handler = nullptr; // query params, and body
+}; 
 
 struct ServerOptions {
   int port;
