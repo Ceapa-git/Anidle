@@ -132,8 +132,8 @@ void serverLoop(const ServerOptions& options) {
     }
 
     std::string response;
-    if (currentRoute != nullptr) {
-      response = currentRoute->handler(request);
+    if (currentRoute != nullptr && currentRoute->method == request.method) {
+        response = currentRoute->handler(request);
     } else {
       Body notFound;
       notFound.type = Body::Type::VALUE;
