@@ -15,15 +15,15 @@ Content-Type: application/json
 
 ## Response
 ### OK
-Content-Type: text/plain
+Content-Type: text/plain<br>
 token
 
 ### BAD_REQUEST
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "request not valid"
 
 ### UNAUTHORIZED
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "username and password do not match"
 
 # /register POST
@@ -41,15 +41,15 @@ Content-Type: application/json
 
 ## Response
 ### OK
-Content-Type: text/plain
+Content-Type: text/plain<br>
 token
 
 ### BAD_REQUEST
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "request not valid"
 
 ### CONFLICT
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "username already registered"
 
 # /validate POST
@@ -57,19 +57,19 @@ Content-Type: text/plain
 Check if the jwt is valid (not expired)
 
 ## Request
-Authorization: Bearer <token>
+Authorization: Bearer \<token\>
 
 ## Response
 ### OK
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "jwt valid"
 
 ### BAD_REQUEST
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "request not valid"
 
 ### FORBIDDEN
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "jwt invalid"
 
 # /refresh POST
@@ -77,7 +77,7 @@ Content-Type: text/plain
 Get a new token (valid 30 minutes) if your current token did not expire
 
 ## Request
-Authorization: Bearer <token>
+Authorization: Bearer \<token\><br>
 Content-Type: application/json
 ```json
 {
@@ -87,15 +87,15 @@ Content-Type: application/json
 
 ## Response
 ### OK
-Content-Type: text/plain
+Content-Type: text/plain<br>
 token
 
 ### BAD_REQUEST
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "request not valid"
 
 ### FORBIDDEN
-Content-Type: text/plain
+Content-Type: text/plain<br>
 "jwt invalid"
 
 # /daily
