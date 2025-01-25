@@ -5,11 +5,12 @@
 #include "types.h"
 #include "db.h"
 #include "security.h"
+#include "log.h"
 
 #include <iostream>
 #include <fstream>
+#include <memory>
 #include <ostream>
-#include <streambuf>
 #include <string>
 #include <cstdlib>
 #include <bsoncxx/json.hpp>
@@ -17,34 +18,6 @@
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/database.hpp>
-
-struct CoutBuf : public std::streambuf {
-  std::ofstream& file;
-  std::streambuf* original;
-  CoutBuf(std::ofstream& f, std::streambuf* orig) : file(f), original(orig) {}
-  int overflow(int c) override {
-    if (c != EOF) {
-      file << "\033[37m" << static_cast<char>(c) << "\033[0m"; // White
-      file.flush();
-      original->sputc(c);
-    }
-    return c;
-  }
-};
-
-struct CerrBuf : public std::streambuf {
-  std::ofstream& file;
-  std::streambuf* original;
-  CerrBuf(std::ofstream& f, std::streambuf* orig) : file(f), original(orig) {}
-  int overflow(int c) override {
-    if (c != EOF) {
-      file << "\033[31m" << static_cast<char>(c) << "\033[0m"; // Red
-      file.flush();
-      original->sputc(c);
-    }
-    return c;
-  }
-};
 
 ServerOptions options;
 bool logToFile = false;
@@ -315,24 +288,19 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  std::streambuf* coutBuf = std::cout.rdbuf();
-  std::streambuf* cerrBuf = std::cerr.rdbuf();
-
-  std::ofstream logFile("log");
-  if (!logFile.is_open()) {
+  auto logFile = std::make_shared<std::ofstream>("log");
+  if (!logFile->is_open()) {
     std::cerr << "Failed to open log file!\n";
     return 1;
   }
-  CoutBuf coutLogBuf(logFile, coutBuf);
-  CerrBuf cerrLogBuf(logFile, cerrBuf);
 
-  std::cout.rdbuf(&coutLogBuf);
-  std::cerr.rdbuf(&cerrLogBuf);
+  {
+    initLogCout(logFile);
+    initLogCerr(logFile);
 
-  createServer(options);
+    createServer(options);
+  }
 
-  std::cout.rdbuf(coutBuf);
-  std::cerr.rdbuf(cerrBuf);
-  logFile.close();
+  logFile->close();
   return 0;
 }

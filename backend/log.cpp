@@ -1,0 +1,59 @@
+#include "log.h"
+
+#include <fstream>
+#include <iostream>
+#include <memory>
+#include <string>
+
+ReplicateToFileStreamBuffer::ReplicateToFileStreamBuffer(
+  std::shared_ptr<std::ofstream> fileStream,
+  std::ostream& stream,
+  const std::string& colorPrefix,
+  const std::string& streamName
+) : originalBuffer(stream.rdbuf()),
+    atLineStart(true),
+    prefix(colorPrefix),
+    streamName(streamName),
+    outputFile(fileStream) {
+  stream.rdbuf(this);
+}
+
+ReplicateToFileStreamBuffer::~ReplicateToFileStreamBuffer() {
+  if (originalBuffer) {
+    std::ostream& stream = streamName == "cout" ? std::cout : std::cerr;
+    stream.rdbuf(originalBuffer);
+  }
+}
+
+int ReplicateToFileStreamBuffer::sync() {
+  if (originalBuffer->pubsync() == -1 || !outputFile->flush()) {
+    return -1;
+  }
+  return 0;
+}
+
+int ReplicateToFileStreamBuffer::overflow(int c) {
+  if (c == EOF) {
+    return EOF;
+  }
+
+  if (atLineStart && c != '\n') {
+    originalBuffer->sputn(prefix.c_str(), prefix.size());
+    *outputFile << prefix;
+  }
+
+  if (originalBuffer->sputc(c) == EOF || !(*outputFile << static_cast<char>(c))) {
+    return EOF;
+  }
+
+  atLineStart = (c == '\n');
+    return c;
+}
+
+void initLogCout(std::shared_ptr<std::ofstream> file) {
+  static ReplicateToFileStreamBuffer logCoutBuffer(file, std::cout, "\033[37m", "cout");
+}
+
+void initLogCerr(std::shared_ptr<std::ofstream> file) {
+  static ReplicateToFileStreamBuffer logCerrBuffer(file, std::cerr, "\033[31m", "cerr");
+}
