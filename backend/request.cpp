@@ -3,6 +3,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <string>
 
 Method stringToHttpMethod(const std::string& str) {
   if (str == "GET") return Method::GET;
@@ -67,6 +68,55 @@ Body parseBody(std::istream& stream) {
   return body;
 }
 
+bool isHex(const std::string& str) {
+  static std::string hexDigits = "0123456789ABCDEFabcdef";
+  for (const auto& c : str) {
+    if (hexDigits.find(c) == std::string::npos) {
+      return false;
+    }
+  }
+  return true;
+}
+
+std::string urlDecode(const std::string& encoded) {
+  std::ostringstream decoded;
+  for (size_t i = 0; i < encoded.length(); ++i) {
+    if (encoded[i] == '%' && i + 2 < encoded.length() && isHex(encoded.substr(i + 1, 2))) {
+      std::string hex = encoded.substr(i + 1, 2);
+      decoded << static_cast<char>(std::stoi(hex, nullptr, 16));
+      i += 2;
+    } else if (encoded[i] == '+') {
+      decoded << ' ';
+    } else {
+      decoded << encoded[i];
+    }
+  }
+  return decoded.str();
+}
+
+std::map<std::string, std::string> parseQueryParams(const std::string& query) {
+  std::map<std::string, std::string> queryParams;
+
+  std::istringstream queryStream(query);
+  std::string pair;
+
+  while (std::getline(queryStream, pair, '&')) {
+    size_t equalPos = pair.find('=');
+    std::string key, value;
+
+    if (equalPos != std::string::npos) {
+      key = urlDecode(pair.substr(0, equalPos));
+      value = urlDecode(pair.substr(equalPos + 1));
+    } else {
+      key = urlDecode(pair);
+    }
+
+    queryParams[key] = value;
+  }
+
+  return queryParams;
+}
+
 HttpRequest parseHttpRequest(char* buffer, int len) {
   std::string raw(buffer, len);
 
@@ -75,7 +125,7 @@ HttpRequest parseHttpRequest(char* buffer, int len) {
   std::string line;
 
   if (std::getline(stream, line)) {
-    std::istringstream requestLine(line);
+    std::istringstream requestLine(urlDecode(line));
     std::string methodStr, url, httpVersion;
 
     requestLine >> methodStr >> url >> httpVersion;
@@ -85,7 +135,7 @@ HttpRequest parseHttpRequest(char* buffer, int len) {
     size_t queryPos = url.find('?');
     if (queryPos != std::string::npos) {
       request.path = url.substr(0, queryPos);
-      request.queryParams = url.substr(queryPos + 1);
+      request.queryParams = parseQueryParams(url.substr(queryPos + 1));
     } else {
       request.path = url;
     }

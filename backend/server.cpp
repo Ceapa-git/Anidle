@@ -112,9 +112,11 @@ void serverLoop(const ServerOptions& options) {
     std::cout << clientIp << ": " << request.methodStr << " " << request.path << "\n";
     if (options.debug) {
       std::cout << "\"" << request.method
-        << "\" \"" << request.path
-        << "\" \"" << request.queryParams
-        << "\"\nHeaders:\n";
+        << "\" \"" << request.path;
+      for (const auto& [key, value] : request.queryParams) {
+        std::cout << key << " = " << value << "\n";
+      }
+      std::cout << "\"\nHeaders:\n";
       for (const auto& header : request.headers) {
         std::cout << header.first << ": " << header.second << "\n";
       }
@@ -127,7 +129,9 @@ void serverLoop(const ServerOptions& options) {
     std::getline(iss, token, '/');
     Route* currentRoute = options.routes;
     while (currentRoute != nullptr && std::getline(iss, token, '/')) {
-      std::cout << "Path fragment: \"" << token << "\"\n";
+      if (options.debug) {
+        std::cout << "Path fragment: \"" << token << "\"\n";
+      }
       currentRoute = findRoute(currentRoute->nested, token);
     }
 

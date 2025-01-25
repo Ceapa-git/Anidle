@@ -31,7 +31,7 @@ struct HttpRequest {
   Method method;
   std::string methodStr;
   std::string path;
-  std::string queryParams;
+  std::map<std::string, std::string> queryParams;
   std::map<std::string, std::string> headers;
   Body body;
 };

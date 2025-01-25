@@ -7,10 +7,15 @@
 #include "security.h"
 #include "log.h"
 
+#include <chrono>
+#include <ctime>
+#include <iomanip>
 #include <iostream>
 #include <fstream>
 #include <memory>
 #include <ostream>
+#include <regex>
+#include <sstream>
 #include <string>
 #include <cstdlib>
 #include <bsoncxx/json.hpp>
@@ -109,6 +114,54 @@ bool checkSameOwnerOfJwt(const HttpRequest& request, const std::string& token) {
 
   auto [tokenHost, tokenUsername] = extractHostAndUsername(token);
   return requestHost == tokenHost && requestUsername == tokenUsername;
+}
+std::string getCurrentDate() {
+  auto now = std::chrono::system_clock::now();
+  std::time_t nowTime = std::chrono::system_clock::to_time_t(now);
+  std::tm* nowTm = std::localtime(&nowTime);
+
+  std::ostringstream oss;
+  oss << std::put_time(nowTm, "%d/%m/%Y");
+  return oss.str();
+}
+bool isValidDate(const std::string& date) {
+  std::regex dateRegex(R"(^\d{2}/\d{2}/\d{4}$)");
+  if (!std::regex_match(date, dateRegex)) {
+    return false;
+  }
+
+  int day, month, year;
+  sscanf(date.c_str(), "%d/%d/%d", &day, &month, &year);
+
+  if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+    return false;
+  }
+
+  static const int daysInMonth[] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  if (month == 2 && year % 4 == 0 && (year % 100 != 0 || year % 400 == 0)) {
+    if (day > 29) return false;
+  } else if (day > daysInMonth[month - 1]) {
+    return false;
+  }
+
+  return true;
+}
+bool isTodayOrFuture(const std::string& date) {
+  std::string currentDate = getCurrentDate();
+
+  auto convertToComparable = [](const std::string& dateStr) {
+    std::istringstream iss(dateStr);
+    int day, month, year;
+    sscanf(dateStr.c_str(), "%d/%d/%d", &day, &month, &year);
+    return year * 10000 + month * 100 + day;
+  };
+
+  return convertToComparable(date) >= convertToComparable(currentDate);
+}
+Body getOrCreateDaily(const std::string& day) {
+  Body response;
+  // TODO check if not earlier than 01/01/2025
+  return response;
 }
 
 int main(int argc, char** argv) {
@@ -278,6 +331,25 @@ int main(int argc, char** argv) {
     return createResponse(FORBIDDEN, invalid);
   };
   validate.next = &refresh;
+
+  Route daily;
+  daily.path = "daily";
+  daily.method = Method::GET;
+  daily.handler = [&](const HttpRequest& request) {
+    std::string day = getCurrentDate();
+    if (request.queryParams.find("day") != request.queryParams.end()) {
+      day = request.queryParams.at("day");
+      if (!isValidDate(day) || isTodayOrFuture(day)) {
+        Body invalid;
+        invalid.type = Body::Type::VALUE;
+        invalid.value = "request not valid";
+        return createResponse(BAD_REQUEST, invalid);
+      }
+    }
+    Body response = getOrCreateDaily(day);
+    return createResponse(OK, response);
+  };
+  refresh.next = &daily;
 
   // end routes -------------------------------------------------------------------
 

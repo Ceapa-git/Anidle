@@ -46,8 +46,13 @@ int ReplicateToFileStreamBuffer::overflow(int c) {
     return EOF;
   }
 
+  if (c == '\n') {
+    outputFile->flush();
+    originalBuffer->pubsync();
+  }
+
   atLineStart = (c == '\n');
-    return c;
+  return c;
 }
 
 void initLogCout(std::shared_ptr<std::ofstream> file) {
