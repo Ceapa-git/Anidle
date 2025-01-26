@@ -27,7 +27,7 @@ struct Body {
   std::vector<Body> array;
 };
 
-struct HttpRequest {
+struct HttpObject {
   std::string ip;
   Method method;
   std::string methodStr;
@@ -42,7 +42,7 @@ struct Route {
   Route* nested = nullptr;
   std::string path = "";
   Method method = Method::NONE;
-  std::function<std::string(const HttpRequest&)> handler = nullptr; // query params, and body
+  std::function<std::string(const HttpObject&)> handler = nullptr; // query params, and body
 }; 
 
 struct ServerOptions {

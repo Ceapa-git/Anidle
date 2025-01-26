@@ -102,6 +102,10 @@ Content-Type: text/plain<br>
 
 Get anime ids for the daily anime
 
+## Request
+query param
+day (optional, default current day): dd/mm/yyyy
+
 ## Response
 Content-Type: application/json
 ```json

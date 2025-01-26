@@ -39,7 +39,7 @@ void processCliArgs(int argc, char** argv) {
   }
 }
 
-bool validateRequestLogin(const HttpRequest& request) {
+bool validateRequestLogin(const HttpObject& request) {
   const auto& body = request.body;
   if (body.type != Body::Type::OBJECT) return false;
   if (body.object.find("username") == body.object.end() || 
@@ -48,7 +48,7 @@ bool validateRequestLogin(const HttpRequest& request) {
       body.object.at("password").type != Body::Type::VALUE) return false;
   return true;
 }
-bool validateLogin(const HttpRequest& request, const mongocxx::database& db) {
+bool validateLogin(const HttpObject& request, const mongocxx::database& db) {
   const auto& body = request.body;
   std::string username = body.object.at("username").value;
   username.erase(0, 1);
@@ -62,7 +62,7 @@ bool validateLogin(const HttpRequest& request, const mongocxx::database& db) {
   auto result = users.find_one(filter.view());
   return result ? true : false;
 }
-bool validateRequestRegister(const HttpRequest& request) {
+bool validateRequestRegister(const HttpObject& request) {
   const auto& body = request.body;
   if (body.type != Body::Type::OBJECT) return false;
   if (body.object.find("username") == body.object.end() || 
@@ -71,7 +71,7 @@ bool validateRequestRegister(const HttpRequest& request) {
       body.object.at("password").type != Body::Type::VALUE) return false;
   return true;
 }
-bool validateRegister(const HttpRequest& request, const mongocxx::database& db) {
+bool validateRegister(const HttpObject& request, const mongocxx::database& db) {
   const auto& body = request.body;
   std::string username = body.object.at("username").value;
   username.erase(0, 1);
@@ -83,7 +83,7 @@ bool validateRegister(const HttpRequest& request, const mongocxx::database& db) 
   auto result = users.find_one(filter.view());
   return result ? false : true;
 }
-void doRegister(const HttpRequest& request, const mongocxx::database& db) {
+void doRegister(const HttpObject& request, const mongocxx::database& db) {
   const auto& body = request.body;
   std::string username = body.object.at("username").value;
   username.erase(0, 1);
@@ -96,17 +96,17 @@ void doRegister(const HttpRequest& request, const mongocxx::database& db) {
     << "password" << password;
   users.insert_one(doc_builder.view());
 }
-bool validateRequestValidate(const HttpRequest& request) {
+bool validateRequestValidate(const HttpObject& request) {
   return request.headers.find("Authorization") != request.headers.end();
 }
-bool validateRequestRefresh(const HttpRequest& request) {
+bool validateRequestRefresh(const HttpObject& request) {
   if (request.headers.find("Authorization") == request.headers.end()) return false;
   if (request.body.type != Body::Type::OBJECT  ||
       request.body.object.find("username") == request.body.object.end() ||
       request.body.object.at("username").type != Body::Type::VALUE) return false;
   return true;
 }
-bool checkSameOwnerOfJwt(const HttpRequest& request, const std::string& token) {
+bool checkSameOwnerOfJwt(const HttpObject& request, const std::string& token) {
   std::string requestHost = request.headers.at("Host");
   std::string requestUsername = request.body.object.at("username").value;
   requestUsername.erase(0, 1);
@@ -133,7 +133,7 @@ bool isValidDate(const std::string& date) {
   int day, month, year;
   sscanf(date.c_str(), "%d/%d/%d", &day, &month, &year);
 
-  if (year < 1900 || month < 1 || month > 12 || day < 1 || day > 31) {
+  if (year < 2025 || month < 1 || month > 12 || day < 1 || day > 31) {
     return false;
   }
 
@@ -158,11 +158,26 @@ bool isTodayOrFuture(const std::string& date) {
 
   return convertToComparable(date) >= convertToComparable(currentDate);
 }
-Body getOrCreateDaily(const std::string& day) {
-  HttpRequest request;
-  malRequest(request);
+Body getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
   Body response;
-  // TODO check if not earlier than 01/01/2025
+  auto daily = db["daily"];
+
+  bsoncxx::builder::stream::document filterBuilder;
+  filterBuilder << "day" << day;
+  auto document = daily.find_one(filterBuilder.view());
+  
+  if (document) {
+
+  } else {
+    std::cout << "Created entry for " << day << "\n";
+  }
+
+  HttpObject request;
+  request.path = "/anime/ranking";
+  request.queryParams["ranking_type"] = "all";
+  request.queryParams["limit"] = "500";
+  HttpObject malResponse = malRequest(request);
+
   return response;
 }
 
@@ -204,7 +219,7 @@ int main(int argc, char** argv) {
   Route base;
   base.path = "";
   base.method = Method::GET;
-  base.handler = [](const HttpRequest& request) {
+  base.handler = [](const HttpObject& request) {
     Body b;
     b.type = Body::Type::VALUE;
     b.value = "running";
@@ -216,7 +231,7 @@ int main(int argc, char** argv) {
   Route login;
   login.path = "login";
   login.method = Method::POST;
-  login.handler = [&](const HttpRequest& request) {
+  login.handler = [&](const HttpObject& request) {
     if (!validateRequestLogin(request)) {
       Body invalid;
       invalid.type = Body::Type::VALUE;
@@ -246,7 +261,7 @@ int main(int argc, char** argv) {
   Route registerUser;
   registerUser.path = "register";
   registerUser.method = Method::POST;
-  registerUser.handler = [&](const HttpRequest& request) {
+  registerUser.handler = [&](const HttpObject& request) {
     if (!validateRequestRegister(request)) {
       Body invalid;
       invalid.type = Body::Type::VALUE;
@@ -277,7 +292,7 @@ int main(int argc, char** argv) {
   Route validate;
   validate.path = "validate";
   validate.method = Method::POST;
-  validate.handler = [](const HttpRequest& request) {
+  validate.handler = [](const HttpObject& request) {
     if (!validateRequestValidate(request)) {
       Body invalid;
       invalid.type = Body::Type::VALUE;
@@ -302,7 +317,7 @@ int main(int argc, char** argv) {
   Route refresh;
   refresh.path = "refresh";
   refresh.method = Method::POST;
-  refresh.handler = [](const HttpRequest& request) {
+  refresh.handler = [](const HttpObject& request) {
     if (!validateRequestRefresh(request)) {
       Body invalid;
       invalid.type = Body::Type::VALUE;
@@ -334,7 +349,7 @@ int main(int argc, char** argv) {
   Route daily;
   daily.path = "daily";
   daily.method = Method::GET;
-  daily.handler = [&](const HttpRequest& request) {
+  daily.handler = [&](const HttpObject& request) {
     std::string day = getCurrentDate();
     if (request.queryParams.find("day") != request.queryParams.end()) {
       day = request.queryParams.at("day");
@@ -345,7 +360,7 @@ int main(int argc, char** argv) {
         return createResponse(BAD_REQUEST, invalid);
       }
     }
-    Body response = getOrCreateDaily(day);
+    Body response = getOrCreateDaily(day, db);
     return createResponse(OK, response);
   };
   refresh.next = &daily;

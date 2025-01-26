@@ -3,8 +3,6 @@
 
 #include "types.h"
 
-#include <string>
-
-std::string malRequest(const HttpRequest&);
+HttpObject malRequest(const HttpObject&);
 
 #endif // API_H

@@ -1,6 +1,7 @@
 #include "http.h"
 #include "types.h"
 
+#include <iomanip>
 #include <regex>
 #include <sstream>
 #include <iostream>
@@ -89,6 +90,21 @@ std::string urlDecode(const std::string& encoded) {
   return decoded.str();
 }
 
+std::string urlEncode(const std::string& raw) {
+  std::ostringstream encoded;
+
+  for (unsigned char c : raw) {
+    if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') {
+      encoded << c;
+    } else if (c == ' ') {
+      encoded << '+';
+    } else {
+      encoded << '%' << std::uppercase << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c);
+    }
+  }
+  return encoded.str();
+}
+
 bool isNumber(const std::string& str) {
   std::regex number("^[+-]?([0-9]*[.])?[0-9]+$");
   return std::regex_match(str, number);
@@ -165,8 +181,8 @@ std::map<std::string, std::string> parseQueryParams(const std::string& query) {
   return queryParams;
 }
 
-HttpRequest parseHttpRequest(const std::string& raw) {
-  HttpRequest request;
+HttpObject parseRequest(const std::string& raw) {
+  HttpObject request;
   std::istringstream stream(raw);
   std::string line;
 
@@ -205,13 +221,25 @@ HttpRequest parseHttpRequest(const std::string& raw) {
   return request;
 }
 
-std::string createHttpRequest(const std::string& host, const HttpRequest& request) {
+std::string createRequest(const std::string& host, const HttpObject& request) {
   return "";
 }
 
 // !request -------------------------------------------------- !request
 
 // response -------------------------------------------------- response
+
+HttpObject parseResponse(const std::string& raw) {
+  HttpObject request;
+  std::istringstream stream(raw);
+  std::string line;
+
+  while (std::getline(stream, line) && line != "\r"); // if headers required modify
+  
+  request.body = parseBody(stream);
+
+  return request;
+}
 
 std::string createResponse(ResponseStatus status, Body body) {
   std::string response = "HTTP/1.1 ";

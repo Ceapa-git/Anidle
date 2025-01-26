@@ -122,7 +122,7 @@ void serverLoop(const ServerOptions& options) {
       continue;
     }
 
-    HttpRequest request = parseHttpRequest(data);
+    HttpObject request = parseRequest(data);
     request.ip = clientIp;
     std::cout << request.ip << ": " << request.methodStr << " " << request.path << "\n";
 
