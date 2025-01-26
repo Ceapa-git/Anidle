@@ -1,5 +1,7 @@
 #include "log.h"
 
+#include <cstring>
+#include <ctime>
 #include <fstream>
 #include <iostream>
 #include <memory>
@@ -38,6 +40,15 @@ int ReplicateToFileStreamBuffer::overflow(int c) {
   }
 
   if (atLineStart && c != '\n') {
+    std::time_t now = std::time(nullptr);
+    std::string timeBuffer(30, '\0');
+    std::strftime(timeBuffer.data(), timeBuffer.size(), "%d/%m/%Y : %H:%M:%S", std::localtime(&now));
+    timeBuffer.resize(std::strlen(timeBuffer.data()));
+    std::string timestamp = "[" + timeBuffer + "] ";
+
+    originalBuffer->sputn(timestamp.c_str(), timestamp.size());
+    *outputFile << timestamp;
+
     originalBuffer->sputn(prefix.c_str(), prefix.size());
     *outputFile << prefix;
   }
@@ -47,6 +58,9 @@ int ReplicateToFileStreamBuffer::overflow(int c) {
   }
 
   if (c == '\n') {
+    originalBuffer->sputn("\033[37m", 5);
+    *outputFile << "\033[37m";
+
     outputFile->flush();
     originalBuffer->pubsync();
   }
@@ -56,7 +70,7 @@ int ReplicateToFileStreamBuffer::overflow(int c) {
 }
 
 void initLogCout(std::shared_ptr<std::ofstream> file) {
-  static ReplicateToFileStreamBuffer logCoutBuffer(file, std::cout, "\033[37m", "cout");
+  static ReplicateToFileStreamBuffer logCoutBuffer(file, std::cout, "\033[32m", "cout");
 }
 
 void initLogCerr(std::shared_ptr<std::ofstream> file) {

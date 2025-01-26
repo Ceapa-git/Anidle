@@ -2,6 +2,7 @@
 .idea/
 utils/
 backend/.cache
+logs/
 
 .env
 log

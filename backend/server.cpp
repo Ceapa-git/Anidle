@@ -1,8 +1,8 @@
 #include "server.h"
-#include "request.h"
-#include "response.h"
+#include "http.h"
 #include "types.h"
 
+#include <cstddef>
 #include <iostream>
 #include <string>
 #include <cstring>
@@ -26,7 +26,7 @@ int serverFd = -1;
 
 void signalHandler(int signal) {
   if (signal == SIGTERM || signal == SIGINT) {
-    std::cout << "\nReceived termination signal (" << signal << "). Shutting down gracefully...\n";
+    std::cout << "Received termination signal (" << signal << "). Shutting down gracefully...\n";
     running = false;
     close(serverFd);
     cv.notify_all();
@@ -79,6 +79,21 @@ Route* findRoute(Route* initial, std::string route) {
   return current;
 }
 
+std::string readFromSocket(int socket) {
+  char buffer[1024];
+  std::string data;
+
+  while (true) {
+    size_t bytes = recv(socket, buffer, sizeof(buffer) - 1, 0);
+    if (bytes <= 0) break;
+    buffer[bytes] = '\0';
+    data += buffer;
+    if (bytes < static_cast<ssize_t>(sizeof(buffer) - 1)) break;
+  }
+
+  return data;
+}
+
 void serverLoop(const ServerOptions& options) {
   while (running) {
     sockaddr_in clientAddr;
@@ -99,17 +114,18 @@ void serverLoop(const ServerOptions& options) {
     char clientIp[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, INET_ADDRSTRLEN);
 
-    char buffer[2048];
-    std::memset(buffer, 0, sizeof(buffer));
-    ssize_t bytesReceived = recv(clientFd, buffer, sizeof(buffer) - 1, 0);
-    if (bytesReceived < 0) {
+    std::string data = readFromSocket(clientFd);
+
+    if (data.length() < 0) {
       std::cerr << clientIp << ": Failed to receive data.\n";
       close(clientFd);
       continue;
     }
 
-    HttpRequest request = parseHttpRequest(buffer, strlen(buffer));
-    std::cout << clientIp << ": " << request.methodStr << " " << request.path << "\n";
+    HttpRequest request = parseHttpRequest(data);
+    request.ip = clientIp;
+    std::cout << request.ip << ": " << request.methodStr << " " << request.path << "\n";
+
     if (options.debug) {
       std::cout << "\"" << request.method
         << "\" \"" << request.path;

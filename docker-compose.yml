@@ -8,6 +8,8 @@ services:
         MONGO_URI: $MONGO_URI
         MONGO_DB: $MONGO_DB
         JWT_ISSUER: $JWT_ISSUER
+        MAL_URL: $MAL_URL
+        MAL_HOST: $MAL_HOST
     container_name: backend-service
     ports:
       - "8081:8080"
@@ -16,6 +18,8 @@ services:
     depends_on:
       - mongodb
     restart: on-failure
+    volumes:
+      - logs-volume:/app/logs
 
   mongodb:
     image: mongo:6.0
@@ -32,6 +36,7 @@ services:
 
 volumes:
   db-anidle:
+  logs-volume:
 
 networks:
   anidle-net:

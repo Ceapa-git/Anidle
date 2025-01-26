@@ -28,6 +28,7 @@ struct Body {
 };
 
 struct HttpRequest {
+  std::string ip;
   Method method;
   std::string methodStr;
   std::string path;

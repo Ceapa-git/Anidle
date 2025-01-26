@@ -1,6 +1,5 @@
-#include "bsoncxx/builder/stream/document-fwd.hpp"
-#include "bsoncxx/builder/stream/helpers.hpp"
-#include "response.h"
+#include "api.h"
+#include "http.h"
 #include "server.h"
 #include "types.h"
 #include "db.h"
@@ -10,6 +9,7 @@
 #include <chrono>
 #include <ctime>
 #include <iomanip>
+#include <ios>
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -159,6 +159,8 @@ bool isTodayOrFuture(const std::string& date) {
   return convertToComparable(date) >= convertToComparable(currentDate);
 }
 Body getOrCreateDaily(const std::string& day) {
+  HttpRequest request;
+  malRequest(request);
   Body response;
   // TODO check if not earlier than 01/01/2025
   return response;
@@ -229,12 +231,11 @@ int main(int argc, char** argv) {
     }
     Body token;
     token.type = Body::Type::VALUE;
-    std::string host = request.headers.at("Host");
     std::string username = request.body.object.at("username").value;
     username.erase(0, 1);
     username.erase(username.length() - 1);
     token.value = createJwt(
-      host,
+      request.ip,
       username,
       60 * 30
     );
@@ -261,12 +262,11 @@ int main(int argc, char** argv) {
     doRegister(request, db);
     Body token;
     token.type = Body::Type::VALUE;
-    std::string host = request.headers.at("Host");
     std::string username = request.body.object.at("username").value;
     username.erase(0, 1);
     username.erase(username.length() - 1);
     token.value = createJwt(
-      host,
+      request.ip,
       username,
       60 * 30
     );
@@ -314,12 +314,11 @@ int main(int argc, char** argv) {
     if (isJwtValid(token) && checkSameOwnerOfJwt(request, token)) {
       Body token;
       token.type = Body::Type::VALUE;
-      std::string host = request.headers.at("Host");
       std::string username = request.body.object.at("username").value;
       username.erase(0, 1);
       username.erase(username.length() - 1);
       token.value = createJwt(
-        host,
+        request.ip,
         username,
         60 * 30
       );
@@ -360,7 +359,7 @@ int main(int argc, char** argv) {
     return 0;
   }
 
-  auto logFile = std::make_shared<std::ofstream>("log");
+  auto logFile = std::make_shared<std::ofstream>("logs/backend", std::ios_base::app);
   if (!logFile->is_open()) {
     std::cerr << "Failed to open log file!\n";
     return 1;
