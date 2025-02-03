@@ -170,13 +170,13 @@ bool isTodayOrFuture(const std::string& date) {
 Json getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
   Json response;
   auto dailies = db["dailies"];
+  auto animeDb = db["anime"];
 
   bsoncxx::builder::stream::document filterBuilderDaily;
   filterBuilderDaily << "day" << day;
   auto document = dailies.find_one(filterBuilderDaily.view());
   
   if (!document) {
-    auto animeDb = db["anime"];
     auto count = animeDb.count_documents({});
     int skip = 0;
     int difficulty = getRandom(9) + 1;
@@ -203,6 +203,7 @@ Json getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
       )
     );
     auto animes = animeDb.find({}, optionsDaily);
+    // TODO if not updated in one week update the entry
 
     int i = 0;
     for (auto&& anime : animes) {
@@ -237,6 +238,12 @@ Json getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
   }
 
   response = parseDocument(document);
+
+  bsoncxx::builder::stream::document filterBuilderAnime;
+  filterBuilderAnime << "_id" << response.object["anime"].oid;
+  document = animeDb.find_one(filterBuilderAnime.view());
+
+  response.object["anime"] = parseDocument(document);
 
   return response;
 }
