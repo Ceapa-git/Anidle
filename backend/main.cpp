@@ -1,4 +1,3 @@
-#include "api.h"
 #include "http.h"
 #include "server.h"
 #include "types.h"
@@ -16,13 +15,18 @@
 #include <ostream>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <cstdlib>
 #include <bsoncxx/json.hpp>
 #include <bsoncxx/builder/stream/document.hpp>
+#include <bsoncxx/builder/stream/helpers.hpp>
+#include <bsoncxx/builder/basic/document.hpp>
+#include <bsoncxx/builder/basic/kvp.hpp>
 #include <mongocxx/client.hpp>
 #include <mongocxx/instance.hpp>
 #include <mongocxx/database.hpp>
+#include <mongocxx/options/find.hpp>
 
 ServerOptions options;
 bool logToFile = false;
@@ -146,6 +150,11 @@ bool isValidDate(const std::string& date) {
 
   return true;
 }
+int getRandom(int interval_max) {
+  srand(time(nullptr));
+  int random = rand();
+  return (int)(((double) random) / RAND_MAX * (interval_max));
+}
 bool isTodayOrFuture(const std::string& date) {
   std::string currentDate = getCurrentDate();
 
@@ -160,23 +169,71 @@ bool isTodayOrFuture(const std::string& date) {
 }
 Body getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
   Body response;
-  auto daily = db["daily"];
+  auto dailies = db["dailies"];
 
-  bsoncxx::builder::stream::document filterBuilder;
-  filterBuilder << "day" << day;
-  auto document = daily.find_one(filterBuilder.view());
+  bsoncxx::builder::stream::document filterBuilderDaily;
+  filterBuilderDaily << "day" << day;
+  auto document = dailies.find_one(filterBuilderDaily.view());
   
-  if (document) {
+  if (!document) {
+    auto animeDb = db["anime"];
+    auto count = animeDb.count_documents({});
+    int skip = 0;
+    int difficulty = getRandom(9) + 1;
+    std::string diff;
+    if (difficulty <= 5) {
+      skip = getRandom(499);
+      diff = "easy";
+    } else if (difficulty <= 8) {
+      skip = getRandom(2999);
+      diff = "medium";
+    } else {
+      skip = getRandom(5999);
+      diff = "hard";
+    }
 
-  } else {
-    std::cout << "Created entry for " << day << "\n";
+    mongocxx::options::find optionsDaily{};
+    optionsDaily.skip(skip).limit(1).projection(
+      bsoncxx::builder::basic::make_document(
+        bsoncxx::builder::basic::kvp(
+          "_id", 1
+        ), bsoncxx::builder::basic::kvp(
+          "title", 1
+        )
+      )
+    );
+    auto animes = animeDb.find({}, optionsDaily);
+
+    int i = 0;
+    for (auto&& anime : animes) {
+      i++;
+      if (i != 1) {
+        std::cerr << "[main.cpp:getOrCreateDaily] found none/more than 1 (" << i
+          << "), skip: " << skip
+          << ", day: " << day
+          << ", count: " << count
+          << "\n";
+        throw std::runtime_error("getOrCreateDaily");
+      }
+
+      auto id = anime["_id"].get_oid();
+      std::cout << "Created entry for " << day
+        << " with anime: \"" << anime["title"].get_string().value.data()
+        << "\" and difficulty: " << diff
+        << "\n";
+      Body daily;
+      daily.type = Body::Type::OBJECT;
+      daily.object["anime"].type = Body::Type::OID;
+      daily.object["anime"].oid = id;
+      daily.object["day"].type = Body::Type::VALUE;
+      daily.object["day"].value = day;
+      daily.object["difficulty"].type = Body::Type::VALUE;
+      daily.object["difficulty"].value = diff;
+      auto doc = createDocument(daily);
+      std::cout << bsoncxx::to_json(doc) << "\n";
+      dailies.insert_one(doc.view());
+    }
   }
-
-  HttpObject request;
-  request.path = "/anime/ranking";
-  request.queryParams["ranking_type"] = "all";
-  request.queryParams["limit"] = "500";
-  HttpObject malResponse = malRequest(request);
 
   return response;
 }

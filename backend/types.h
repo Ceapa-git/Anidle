@@ -1,6 +1,7 @@
 #ifndef TYPE_H
 #define TYPE_H
 
+#include <bsoncxx/types.hpp>
 #include <string>
 #include <map>
 #include <functional>
@@ -18,13 +19,15 @@ struct Body {
   enum class Type {
     VALUE,
     OBJECT,
-    ARRAY
+    ARRAY,
+    OID
   };
 
   Type type;
   std::string value;
   std::map<std::string, Body> object;
   std::vector<Body> array;
+  bsoncxx::types::b_oid oid;
 };
 
 struct HttpObject {
