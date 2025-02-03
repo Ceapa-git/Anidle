@@ -1,5 +1,5 @@
 #include "db.h"
-#include "http.h"
+#include "json.h"
 #include "types.h"
 
 #include <iostream>
@@ -26,27 +26,26 @@ void createCollection(mongocxx::database& db, std::string col) {
   }
 }
 
-Body parseDocument(const bsoncxx::stdx::optional<bsoncxx::document::value>& document) {
+Json parseDocument(const bsoncxx::stdx::optional<bsoncxx::document::value>& document) {
   std::string str = bsoncxx::to_json(document->view());
-  std::cerr << "json: " << str << "\n";
   std::istringstream stream(str);
-  return parseBody(stream);
+  return buildJson(stream);
 }
 
-bsoncxx::builder::basic::array buildArray(const Body&);
-bsoncxx::builder::basic::document buildObject(const Body&);
+bsoncxx::builder::basic::array buildArray(const Json&);
+bsoncxx::builder::basic::document buildObject(const Json&);
 
-bsoncxx::builder::basic::array buildArray(const Body& body) {
-  if (body.type == Body::Type::ARRAY) {
+bsoncxx::builder::basic::array buildArray(const Json& body) {
+  if (body.type == Json::Type::ARRAY) {
     auto array = bsoncxx::builder::basic::array{};
     for (const auto& value : body.array) {
-      if (value.type == Body::Type::VALUE) {
+      if (value.type == Json::Type::VALUE) {
         array.append(value.value);
-      } else if (value.type == Body::Type::OID) {
+      } else if (value.type == Json::Type::OID) {
         array.append(value.oid);
-      } else if (value.type == Body::Type::ARRAY) {
+      } else if (value.type == Json::Type::ARRAY) {
         array.append(buildArray(value));
-      } else if (value.type == Body::Type::OBJECT) {
+      } else if (value.type == Json::Type::OBJECT) {
         array.append(buildObject(value));
       }
     }
@@ -56,19 +55,19 @@ bsoncxx::builder::basic::array buildArray(const Body& body) {
     throw std::runtime_error("buildArray failed");
   }
 }
-bsoncxx::builder::basic::document buildObject(const Body& body) {
+bsoncxx::builder::basic::document buildObject(const Json& body) {
   using bsoncxx::builder::basic::kvp;
 
-  if (body.type == Body::Type::OBJECT) {
+  if (body.type == Json::Type::OBJECT) {
     auto object = bsoncxx::builder::basic::document{};
     for (const auto& [key, value] : body.object) {
-      if (value.type == Body::Type::VALUE) {
+      if (value.type == Json::Type::VALUE) {
         object.append(kvp(key, value.value));
-      } else if (value.type == Body::Type::OID) {
+      } else if (value.type == Json::Type::OID) {
         object.append(kvp(key, value.oid));
-      } else if (value.type == Body::Type::ARRAY) {
+      } else if (value.type == Json::Type::ARRAY) {
         object.append(kvp(key, buildArray(value)));
-      } else if (value.type == Body::Type::OBJECT) {
+      } else if (value.type == Json::Type::OBJECT) {
         object.append(kvp(key, buildObject(value)));
       }
     }
@@ -79,8 +78,8 @@ bsoncxx::builder::basic::document buildObject(const Body& body) {
   }
 }
 
-bsoncxx::document::value createDocument(const Body& body) {
-  if (body.type != Body::Type::OBJECT) {
+bsoncxx::document::value createDocument(const Json& body) {
+  if (body.type != Json::Type::OBJECT) {
     std::cerr << "[db.cpp:createDocument] cannot create document from non-object body\n";
     throw std::runtime_error("createDocument failed");
   }

@@ -10,7 +10,7 @@
 mongocxx::client createDBClient(std::string);
 void createCollection(mongocxx::database&, std::string);
 
-Body parseDocument(const bsoncxx::stdx::optional<bsoncxx::document::value>&);
-bsoncxx::document::value createDocument(const Body&);
+Json parseDocument(const bsoncxx::stdx::optional<bsoncxx::document::value>&);
+bsoncxx::document::value createDocument(const Json&);
 
 #endif // DB_H

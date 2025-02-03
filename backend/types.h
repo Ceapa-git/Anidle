@@ -15,7 +15,8 @@ enum Method {
   UNKNOWN = 16
 };
 
-struct Body {
+// TODO check if any other function needs to be refactored and move inside json.cpp
+struct Json {
   enum class Type {
     VALUE,
     OBJECT,
@@ -25,8 +26,8 @@ struct Body {
 
   Type type;
   std::string value;
-  std::map<std::string, Body> object;
-  std::vector<Body> array;
+  std::map<std::string, Json> object;
+  std::vector<Json> array;
   bsoncxx::types::b_oid oid;
 };
 
@@ -37,7 +38,7 @@ struct HttpObject {
   std::string path;
   std::map<std::string, std::string> queryParams;
   std::map<std::string, std::string> headers;
-  Body body;
+  Json body;
 };
 
 struct Route {

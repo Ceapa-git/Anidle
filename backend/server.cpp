@@ -42,22 +42,22 @@ int validateOptions(const ServerOptions& options) {
   return 0;
 }
 
-void printBody(const Body& body, int indent = 0) {
+void printBody(const Json& body, int indent = 0) {
   std::string indentStr(indent, ' ');
 
-  if (body.type == Body::Type::VALUE) {
+  if (body.type == Json::Type::VALUE) {
     std::cout << body.value << "\n";
-  } else if (body.type == Body::Type::OBJECT){
+  } else if (body.type == Json::Type::OBJECT){
     std::cout << "\n";
     for (const auto& [key, value] : body.object) {
       std::cout << indentStr << key << ": ";
       printBody(value, indent + 2);
     }
-  } else if (body.type == Body::Type::ARRAY) {
+  } else if (body.type == Json::Type::ARRAY) {
     std::cout << "\n" << indentStr << "[\n";
     for (const auto& value : body.array) {
       std::cout << indentStr << "  ";
-      if (value.type == Body::Type::OBJECT) {
+      if (value.type == Json::Type::OBJECT) {
         std::cout << "{";
         printBody(value, indent + 4);
         std::cout << indentStr << "  }\n";
@@ -82,10 +82,13 @@ Route* findRoute(Route* initial, std::string route) {
 std::string readFromSocket(int socket) {
   char buffer[1024];
   std::string data;
+  int total = 0;
 
   while (true) {
     size_t bytes = recv(socket, buffer, sizeof(buffer) - 1, 0);
     if (bytes <= 0) break;
+    total += bytes;
+    if (total >= 5000) return data;
     buffer[bytes] = '\0';
     data += buffer;
     if (bytes < static_cast<ssize_t>(sizeof(buffer) - 1)) break;
@@ -113,6 +116,7 @@ void serverLoop(const ServerOptions& options) {
 
     char clientIp[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &(clientAddr.sin_addr), clientIp, INET_ADDRSTRLEN);
+    // TODO add ip bans (to be fetched from mongo)
 
     std::string data = readFromSocket(clientFd);
 
@@ -155,8 +159,8 @@ void serverLoop(const ServerOptions& options) {
     if (currentRoute != nullptr && currentRoute->method == request.method) {
         response = currentRoute->handler(request);
     } else {
-      Body notFound;
-      notFound.type = Body::Type::VALUE;
+      Json notFound;
+      notFound.type = Json::Type::VALUE;
       notFound.value = "Not Found";
       response = createResponse(NOT_FOUND, notFound);
     }

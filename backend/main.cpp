@@ -45,11 +45,11 @@ void processCliArgs(int argc, char** argv) {
 
 bool validateRequestLogin(const HttpObject& request) {
   const auto& body = request.body;
-  if (body.type != Body::Type::OBJECT) return false;
+  if (body.type != Json::Type::OBJECT) return false;
   if (body.object.find("username") == body.object.end() || 
-      body.object.at("username").type != Body::Type::VALUE) return false;
+      body.object.at("username").type != Json::Type::VALUE) return false;
   if (body.object.find("password") == body.object.end() || 
-      body.object.at("password").type != Body::Type::VALUE) return false;
+      body.object.at("password").type != Json::Type::VALUE) return false;
   return true;
 }
 bool validateLogin(const HttpObject& request, const mongocxx::database& db) {
@@ -68,11 +68,11 @@ bool validateLogin(const HttpObject& request, const mongocxx::database& db) {
 }
 bool validateRequestRegister(const HttpObject& request) {
   const auto& body = request.body;
-  if (body.type != Body::Type::OBJECT) return false;
+  if (body.type != Json::Type::OBJECT) return false;
   if (body.object.find("username") == body.object.end() || 
-      body.object.at("username").type != Body::Type::VALUE) return false;
+      body.object.at("username").type != Json::Type::VALUE) return false;
   if (body.object.find("password") == body.object.end() || 
-      body.object.at("password").type != Body::Type::VALUE) return false;
+      body.object.at("password").type != Json::Type::VALUE) return false;
   return true;
 }
 bool validateRegister(const HttpObject& request, const mongocxx::database& db) {
@@ -105,9 +105,9 @@ bool validateRequestValidate(const HttpObject& request) {
 }
 bool validateRequestRefresh(const HttpObject& request) {
   if (request.headers.find("Authorization") == request.headers.end()) return false;
-  if (request.body.type != Body::Type::OBJECT  ||
+  if (request.body.type != Json::Type::OBJECT  ||
       request.body.object.find("username") == request.body.object.end() ||
-      request.body.object.at("username").type != Body::Type::VALUE) return false;
+      request.body.object.at("username").type != Json::Type::VALUE) return false;
   return true;
 }
 bool checkSameOwnerOfJwt(const HttpObject& request, const std::string& token) {
@@ -167,8 +167,8 @@ bool isTodayOrFuture(const std::string& date) {
 
   return convertToComparable(date) >= convertToComparable(currentDate);
 }
-Body getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
-  Body response;
+Json getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
+  Json response;
   auto dailies = db["dailies"];
 
   bsoncxx::builder::stream::document filterBuilderDaily;
@@ -221,19 +221,22 @@ Body getOrCreateDaily(const std::string& day, const mongocxx::database& db) {
         << " with anime: \"" << anime["title"].get_string().value.data()
         << "\" and difficulty: " << diff
         << "\n";
-      Body daily;
-      daily.type = Body::Type::OBJECT;
-      daily.object["anime"].type = Body::Type::OID;
+      Json daily;
+      daily.type = Json::Type::OBJECT;
+      daily.object["anime"].type = Json::Type::OID;
       daily.object["anime"].oid = id;
-      daily.object["day"].type = Body::Type::VALUE;
+      daily.object["day"].type = Json::Type::VALUE;
       daily.object["day"].value = day;
-      daily.object["difficulty"].type = Body::Type::VALUE;
+      daily.object["difficulty"].type = Json::Type::VALUE;
       daily.object["difficulty"].value = diff;
       auto doc = createDocument(daily);
       std::cout << bsoncxx::to_json(doc) << "\n";
       dailies.insert_one(doc.view());
+      document = dailies.find_one(filterBuilderDaily.view());
     }
   }
+
+  response = parseDocument(document);
 
   return response;
 }
@@ -277,10 +280,10 @@ int main(int argc, char** argv) {
   base.path = "";
   base.method = Method::GET;
   base.handler = [](const HttpObject& request) {
-    Body b;
-    b.type = Body::Type::VALUE;
-    b.value = "running";
-    return createResponse(OK, b);
+    Json body;
+    body.type = Json::Type::VALUE;
+    body.value = "running";
+    return createResponse(OK, body);
   };
 
   // routes -----------------------------------------------------------------------
@@ -290,19 +293,19 @@ int main(int argc, char** argv) {
   login.method = Method::POST;
   login.handler = [&](const HttpObject& request) {
     if (!validateRequestLogin(request)) {
-      Body invalid;
-      invalid.type = Body::Type::VALUE;
+      Json invalid;
+      invalid.type = Json::Type::VALUE;
       invalid.value = "request not valid";
       return createResponse(BAD_REQUEST, invalid);
     }
     if (!validateLogin(request, db)) {
-      Body invalid;
-      invalid.type = Body::Type::VALUE;
+      Json invalid;
+      invalid.type = Json::Type::VALUE;
       invalid.value = "username and password do not match";
       return createResponse(UNAUTHORIZED, invalid);
     }
-    Body token;
-    token.type = Body::Type::VALUE;
+    Json token;
+    token.type = Json::Type::VALUE;
     std::string username = request.body.object.at("username").value;
     username.erase(0, 1);
     username.erase(username.length() - 1);
@@ -320,20 +323,20 @@ int main(int argc, char** argv) {
   registerUser.method = Method::POST;
   registerUser.handler = [&](const HttpObject& request) {
     if (!validateRequestRegister(request)) {
-      Body invalid;
-      invalid.type = Body::Type::VALUE;
+      Json invalid;
+      invalid.type = Json::Type::VALUE;
       invalid.value = "request not valid";
       return createResponse(BAD_REQUEST, invalid);
     }
     if (!validateRegister(request, db)) {
-      Body invalid;
-      invalid.type = Body::Type::VALUE;
+      Json invalid;
+      invalid.type = Json::Type::VALUE;
       invalid.value = "username already registered";
       return createResponse(CONFLICT, invalid);
     }
     doRegister(request, db);
-    Body token;
-    token.type = Body::Type::VALUE;
+    Json token;
+    token.type = Json::Type::VALUE;
     std::string username = request.body.object.at("username").value;
     username.erase(0, 1);
     username.erase(username.length() - 1);
@@ -351,21 +354,21 @@ int main(int argc, char** argv) {
   validate.method = Method::POST;
   validate.handler = [](const HttpObject& request) {
     if (!validateRequestValidate(request)) {
-      Body invalid;
-      invalid.type = Body::Type::VALUE;
+      Json invalid;
+      invalid.type = Json::Type::VALUE;
       invalid.value = "request not valid";
       return createResponse(BAD_REQUEST, invalid);
     }
     std::string bearer = request.headers.at("Authorization");
     std::string token = bearer.substr(7);
     if (isJwtValid(token)) {
-      Body valid;
-      valid.type = Body::Type::VALUE;
+      Json valid;
+      valid.type = Json::Type::VALUE;
       valid.value = "jwt valid";
       return createResponse(OK, valid);
     }
-    Body invalid;
-    invalid.type = Body::Type::VALUE;
+    Json invalid;
+    invalid.type = Json::Type::VALUE;
     invalid.value = "jwt invalid";
     return createResponse(FORBIDDEN, invalid);
   };
@@ -376,16 +379,16 @@ int main(int argc, char** argv) {
   refresh.method = Method::POST;
   refresh.handler = [](const HttpObject& request) {
     if (!validateRequestRefresh(request)) {
-      Body invalid;
-      invalid.type = Body::Type::VALUE;
+      Json invalid;
+      invalid.type = Json::Type::VALUE;
       invalid.value = "request not valid";
       return createResponse(BAD_REQUEST, invalid);
     }
     std::string bearer = request.headers.at("Authorization");
     std::string token = bearer.substr(7);
     if (isJwtValid(token) && checkSameOwnerOfJwt(request, token)) {
-      Body token;
-      token.type = Body::Type::VALUE;
+      Json token;
+      token.type = Json::Type::VALUE;
       std::string username = request.body.object.at("username").value;
       username.erase(0, 1);
       username.erase(username.length() - 1);
@@ -396,8 +399,8 @@ int main(int argc, char** argv) {
       );
       return createResponse(OK, token);
     }
-    Body invalid;
-    invalid.type = Body::Type::VALUE;
+    Json invalid;
+    invalid.type = Json::Type::VALUE;
     invalid.value = "jwt invalid";
     return createResponse(FORBIDDEN, invalid);
   };
@@ -411,13 +414,13 @@ int main(int argc, char** argv) {
     if (request.queryParams.find("day") != request.queryParams.end()) {
       day = request.queryParams.at("day");
       if (!isValidDate(day) || isTodayOrFuture(day)) {
-        Body invalid;
-        invalid.type = Body::Type::VALUE;
+        Json invalid;
+        invalid.type = Json::Type::VALUE;
         invalid.value = "request not valid";
         return createResponse(BAD_REQUEST, invalid);
       }
     }
-    Body response = getOrCreateDaily(day, db);
+    Json response = getOrCreateDaily(day, db);
     return createResponse(OK, response);
   };
   refresh.next = &daily;
@@ -447,3 +450,4 @@ int main(int argc, char** argv) {
   logFile->close();
   return 0;
 }
+

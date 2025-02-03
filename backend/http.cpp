@@ -1,4 +1,5 @@
 #include "http.h"
+#include "json.h"
 #include "types.h"
 
 #include <iomanip>
@@ -9,9 +10,9 @@
 
 // common ------------------------------------------------------ common
 
-Body parseBody(std::istream& stream) {
-  Body body;
-  body.type = Body::Type::OBJECT;
+Json parseBody(std::istream& stream) {
+  Json body;
+  body.type = Json::Type::OBJECT;
 
   std::string line;
   while (std::getline(stream, line)) {
@@ -26,13 +27,13 @@ Body parseBody(std::istream& stream) {
       value.erase(0, value.find_first_not_of(" \t\r\n"));
 
       if (value == "{") {
-        Body nestedBody = parseBody(stream);
+        Json nestedBody = parseBody(stream);
         body.object[key] = nestedBody;
       } else if (value == "}") {
         break;
       } else if (value == "[") {
-        Body arrayBody;
-        arrayBody.type = Body::Type::ARRAY;
+        Json arrayBody;
+        arrayBody.type = Json::Type::ARRAY;
 
         while (std::getline(stream, line)) {
           line.erase(0, line.find_first_not_of(" \t\r\n"));
@@ -41,11 +42,11 @@ Body parseBody(std::istream& stream) {
           if (line == "]") {
             break;
           } else if (line == "{") {
-            Body nestedBody = parseBody(stream);
+            Json nestedBody = parseBody(stream);
             arrayBody.array.push_back(nestedBody);
           } else {
-            Body valueBody;
-            valueBody.type = Body::Type::VALUE;
+            Json valueBody;
+            valueBody.type = Json::Type::VALUE;
             valueBody.value = line;
             arrayBody.array.push_back(valueBody);
           }
@@ -53,8 +54,8 @@ Body parseBody(std::istream& stream) {
 
         body.object[key] = arrayBody;
       } else {
-        Body valueBody;
-        valueBody.type = Body::Type::VALUE;
+        Json valueBody;
+        valueBody.type = Json::Type::VALUE;
         valueBody.value = value;
         body.object[key] = valueBody;
       }
@@ -108,42 +109,6 @@ std::string urlEncode(const std::string& raw) {
 bool isNumber(const std::string& str) {
   std::regex number("^[+-]?([0-9]*[.])?[0-9]+$");
   return std::regex_match(str, number);
-}
-
-std::string bodyToString(const Body& body) {
-  std::string str;
-  if (body.type == Body::Type::OBJECT) {
-    str += "{";
-    bool pop = false;
-    for (const auto& [key, value] : body.object) {
-      str += "\"" + key + "\":" + bodyToString(value) + ",";
-      pop = true;
-    }
-    if (pop) {
-      str.pop_back();
-    }
-    str += "}";
-  } else if (body.type == Body::Type::VALUE) {
-    if (isNumber(body.value)) {
-      str += body.value;
-    } else if (body.value == "true" || body.value == "false") {
-      str += body.value;
-    } else {
-      str += "\"" + body.value + "\"";
-    }
-  } else if (body.type == Body::Type::ARRAY) {
-    str += "[";
-    bool pop = false;
-    for (const auto& value : body.array) {
-      str += bodyToString(value) + ",";
-      pop = true;
-    }
-    if (pop) {
-      str.pop_back();
-    }
-    str += "]";
-  }
-  return str;
 }
 
 // !common ---------------------------------------------------- !common
@@ -241,7 +206,7 @@ HttpObject parseResponse(const std::string& raw) {
   return request;
 }
 
-std::string createResponse(ResponseStatus status, Body body) {
+std::string createResponse(ResponseStatus status, Json body) {
   std::string response = "HTTP/1.1 ";
 
   switch (status) {
@@ -273,15 +238,15 @@ std::string createResponse(ResponseStatus status, Body body) {
 
   response += "Connection: close\r\n";
 
-  if (body.type == Body::Type::VALUE) {
+  if (body.type == Json::Type::VALUE) {
     response += "Content-Type: text/plain\r\n";
     response += "Content-Length: " + std::to_string(body.value.length()) + "\r\n";
     response += "\r\n";
     response += body.value;
-  } else if (body.type == Body::Type::OBJECT) {
+  } else if (body.type == Json::Type::OBJECT) {
     response += "Content-Type: application/json\r\n";
     response += "\r\n";
-    response += bodyToString(body);
+    response += jsonToString(body);
   }
 
   return response;
