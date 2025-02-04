@@ -288,8 +288,11 @@ int main(int argc, char** argv) {
   base.method = Method::GET;
   base.handler = [](const HttpObject& request) {
     Json body;
-    body.type = Json::Type::VALUE;
-    body.value = "running";
+    body.type = Json::Type::OBJECT;
+    body.object["status"].type = Json::Type::VALUE;
+    body.object["status"].value = "running";
+    body.object["details"].type = Json::Type::VALUE;
+    body.object["details"].value = "for more info contact me on discord: " + std::string(std::getenv("DISCORD"));
     return createResponse(OK, body);
   };
 

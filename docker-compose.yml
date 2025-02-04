@@ -10,6 +10,7 @@ services:
         JWT_ISSUER: $JWT_ISSUER
         MAL_URL: $MAL_URL
         MAL_HOST: $MAL_HOST
+        DISCORD: $DISCORD
     container_name: backend-service
     ports:
       - "8081:8080"
